@@ -1,0 +1,22 @@
+# Copy to config.toml. Put production secrets outside the checkout.
+mode = "paper"
+database = "var/paper.sqlite3"
+initial_cash = "500"
+entry_days = 55
+exit_days = 20
+sma_days = 200
+maker_fee = "0.005"
+taker_fee = "0.009"
+drawdown_limit = "0.70"
+poll_seconds = 5
+quote_max_age_seconds = 15
+entry_window_seconds = 3600
+exit_window_seconds = 60
+monthly_operating_cost = "5"
+# Paper fills require price to move strictly through the limit, not merely touch it.
+volume_participation = "0.01"
+slippage_bps = "10"
+spread_bps = "2"
+# Without a token, dashboard controls are disabled. Set LOOP_DASHBOARD_TOKEN
+# in your shell or the service's protected EnvironmentFile (minimum 32 characters).
+# Optional email: LOOP_RESEND_API_KEY, LOOP_EMAIL_FROM, LOOP_EMAIL_TO.

@@ -1,0 +1,63 @@
+<section class="panel" id="research">
+  <p class="eyebrow">RESEARCH CONCLUSIONS</p>
+  <h3>BTC, ETH and SOL · held-out comparison</h3>
+  <p class="muted">Independent $500 experiments using the same strategy and 2024–2025 period. Each benchmark holds its own asset; these results do not represent a combined portfolio.</p>
+  <div class="table-wrap"><table><thead><tr><th>Asset</th><th>Strategy</th><th>Buy & hold</th><th>Difference</th><th>Conclusion</th></tr></thead><tbody>
+  {% for asset in ['BTC', 'ETH', 'SOL'] %}{% set comparison = comparisons[loop.index0] %}<tr><td><a href="/?research_asset={{ asset }}#research">{{ asset }}</a></td>{% if comparison %}<td>{{ money(comparison.body.metrics.ending_wealth) }}</td><td>{{ money(comparison.body.metrics.benchmark_wealth) }}</td><td>{{ money(comparison.gap) }}</td><td>{{ comparison.result }}</td>{% else %}<td colspan="4">Not run yet</td>{% endif %}</tr>{% endfor %}
+  </tbody></table></div>
+  <h3>{{ research_asset }} · detailed conclusions</h3>
+  {% for failure in research_failures %}<p><strong>{{ failure.label }}: incomplete; no performance conclusion.</strong> Required Coinbase minute history has gaps. The run was rejected without filling missing prices.</p>{% endfor %}
+  {% if conclusions %}{% for note in conclusions.held.body.get('coverage_notes', []) %}<p class="muted">{{ note }}</p>{% endfor %}{% endif %}
+  {% if conclusions %}
+  {% set held = conclusions.held %}
+  {% set metrics = held.body.metrics %}
+  <h3>Main strategy {{ 'lagged' if held.gap < 0 else 'beat' if held.gap > 0 else 'matched' }} {{ research_asset }} in the held-out test</h3>
+  <p>The <strong>{{ held.settings_label }}</strong> entry / exit / SMA strategy ended at <strong>{{ money(metrics.ending_wealth) }}</strong> versus <strong>{{ money(metrics.benchmark_wealth) }}</strong> for buy-and-hold: <strong>{{ money(held.gap) }}</strong> difference. It returned {{ percent(held.strategy_return) }}; {{ research_asset }} returned {{ percent(held.benchmark_return) }}.</p>
+  <p class="muted">{{ held.start_date }} through {{ held.end_date }} (end exclusive) · Each started with {{ money(held.body.parameters.initial_cash) }} · Trading costs included · Operating costs excluded from this headline</p>
+
+  <div class="research-baseline">
+    <h4>Did every strategy underperform?</h4>
+    <p>Results depend on the period. The main strategy's tests are below; parameter variants are a separate validation comparison.</p>
+    <div class="table-wrap"><table><thead><tr><th>Main strategy period</th><th>Strategy</th><th>Buy & hold</th><th>Conclusion</th></tr></thead><tbody>
+      {% for report in conclusions.baseline %}<tr><td>{{ report.role }}<small class="cell-note">{{ report.start_date }} → {{ report.end_date }}</small></td><td>{{ money(report.body.metrics.ending_wealth) }}</td><td>{{ money(report.body.metrics.benchmark_wealth) }}</td><td class="{{ report.direction }}">{{ report.result }}</td></tr>{% endfor %}
+    </tbody></table></div>
+    {% if conclusions.variants %}<p><strong>{{ conclusions.variant_wins }} of {{ conclusions.variants|length }} parameter variants beat {{ research_asset }} in their validation periods.</strong> The variants were tested on validation data only. Their results do not establish how they would perform in the held-out period.</p>{% endif %}
+    <p class="muted">A higher ending balance than {{ research_asset }} can still represent a loss from the initial capital. A run with no fills tests staying in cash, not successful trade execution. These are variations of one breakout strategy, not a comparison of every crypto strategy.</p>
+  </div>
+
+  <div class="two-column research-explanation">
+    <article>
+      <h4>What drove the held-out result?</h4>
+      <dl>
+        <div><dt>Strategy gross trading P/L</dt><dd>{{ money(conclusions.gross_pnl) }}</dd></div>
+        <div><dt>Recorded trading fees</dt><dd>− {{ money(conclusions.fees) }}</dd></div>
+        <div><dt>Strategy net gain</dt><dd>{{ money(conclusions.net_gain) }}</dd></div>
+        <div><dt>Buy-and-hold net gain</dt><dd>{{ money(conclusions.benchmark_gain) }}</dd></div>
+        <div><dt>Cash at daily closes</dt><dd>{{ percent(conclusions.cash_fraction) }}</dd></div>
+        <div><dt>Completed positions</dt><dd>{{ conclusions.completed_trades }} · {{ conclusions.wins }} profitable / {{ conclusions.losses }} losing</dd></div>
+        <div><dt>Completely missed entries</dt><dd>{{ conclusions.missed_entries }}</dd></div>
+        <div><dt>Drawdown halt triggered</dt><dd>{{ 'Yes' if conclusions.halted else 'No' }}</dd></div>
+      </dl>
+      <p class="muted">Gross P/L uses recorded fill quantities and ending valuation before recorded fees. A rerun with different fees could change position sizes. Cash exposure counts daily closing observations.</p>
+    </article>
+    <article>
+      <h4>How to interpret this</h4>
+      {% if conclusions.halted %}<p><strong>The drawdown halt triggered.</strong> Sampled portfolio drawdown reached {{ percent(metrics.max_drawdown) }}, exceeding the {{ percent(held.body.parameters.drawdown_limit) }} limit measured from peak wealth. The simulation liquidated the position and stopped new entries for the remaining period; there is no automatic restart.</p>{% endif %}
+      {% if held.gap < 0 and conclusions.gross_pnl < conclusions.benchmark_gain %}<p>The strategy's {{ money(conclusions.gross_pnl) }} gross P/L was already below {{ research_asset }}'s {{ money(conclusions.benchmark_gain) }} net gain. Its {{ money(conclusions.fees) }} in fees widened the gap. Fees alone do not explain the {{ money(conclusions.shortfall) }} shortfall.</p>{% else %}<p>The main strategy {{ held.result|lower }} during this held-out period. The trade ledger and cash exposure describe how that outcome was produced.</p>{% endif %}
+      <p>The entry rule waits for a breakout and the exit rule waits for a channel breakdown. This captures selected portions of {{ research_asset }}'s moves. Remaining in cash can avoid falling prices and miss rising prices. The cash exposure and trades below support examining timing; they do not assign an exact dollar loss to each missed rally.</p>
+      <p>Sampled maximum drawdown was <strong>{{ percent(metrics.max_drawdown) }}</strong> for the strategy and <strong>{{ percent(metrics.benchmark_max_drawdown) }}</strong> for {{ research_asset }}. {{ 'Lower' if conclusions.drawdown_difference > 0 else 'Higher' if conclusions.drawdown_difference < 0 else 'Equal' }} drawdown is a separate result from ending wealth.</p>
+      <p>With operating costs of {{ money(metrics.operating_cost) }}, strategy wealth was {{ money(metrics.wealth_after_operating_cost) }}. {{ research_asset }} wealth with the <em>same</em> cost charge was {{ money(metrics.benchmark_after_same_operating_cost) }}. Passive {{ research_asset }} ownership without that charge remained {{ money(metrics.benchmark_wealth) }}.</p>
+      <p class="muted">Historical fills, spread, and slippage are modeled. Daily risk sampling cannot establish the full intraday drawdown or prove real exchange fills. Paper observation continues; real orders remain disabled.</p>
+    </article>
+  </div>
+  <details open><summary>Held-out completed trades · P/L after trading fees</summary><div class="table-wrap"><table><thead><tr><th>Entry (UTC)</th><th>Exit (UTC)</th><th>Average entry</th><th>Average exit</th><th>Fees</th><th>Net P/L</th></tr></thead><tbody>
+    {% for trade in conclusions.cycles %}<tr><td>{{ trade.entry }}</td><td>{{ trade.exit }}</td><td>{{ money(trade.entry_price) }}</td><td>{{ money(trade.exit_price) }}</td><td>{{ money(trade.fees) }}</td><td class="{{ 'positive' if trade.pnl > 0 else 'negative' if trade.pnl < 0 else 'muted' }}">{{ money(trade.pnl) }}</td></tr>{% else %}<tr><td colspan="6">No completed positions. Open positions, if any, contribute to ending valuation.</td></tr>{% endfor %}
+  </tbody></table></div></details>
+  {% else %}
+  <h3>Backtest evidence</h3><p class="muted">A held-out report is needed for a main-strategy conclusion. Available reports appear below.</p>
+  {% endif %}
+
+  <details open><summary>All test results · latest run for each period and configuration</summary><div class="table-wrap"><table><thead><tr><th>Test & parameters</th><th>Strategy</th><th>Buy & hold</th><th>Difference</th><th>Conclusion</th><th>Fills</th><th>Report</th></tr></thead><tbody>
+    {% for report in reports %}<tr><td>{{ report.body.label }}<small class="cell-note">{{ report.role }} · {{ report.settings_label }}<br>{{ report.start_date }} → {{ report.end_date }}</small></td><td>{{ money(report.body.metrics.ending_wealth) }}<small class="cell-note">{{ percent(report.strategy_return) }} return</small></td><td>{{ money(report.body.metrics.benchmark_wealth) }}<small class="cell-note">{{ percent(report.benchmark_return) }} return</small></td><td class="{{ report.direction }}">{{ money(report.gap) }}</td><td class="{{ report.direction }}">{{ report.result }}{% if report.no_fills %}<small class="cell-note">No fills · Execution unvalidated</small>{% endif %}</td><td>{{ report.body.metrics.fills }}</td><td><a href="/reports/{{ report.id }}">JSON ↗</a></td></tr>{% else %}<tr><td colspan="7" class="muted">Run a backtest or research suite to populate reports.</td></tr>{% endfor %}
+  </tbody></table></div></details>
+</section>

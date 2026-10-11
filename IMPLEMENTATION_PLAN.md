@@ -4,7 +4,7 @@
 
 Build a single-user application that tests whether a low-turnover BTC spot strategy can outperform BTC buy-and-hold after fees. Start with $500 in simulated USD cash. Deliver backtesting and continuous paper trading before enabling real orders.
 
-The first release trades BTC-USD only through Coinbase Advanced Trade. It uses no leverage, short selling, ETH, grid trading, or multiple strategies. Live trading requires the owner's explicit review and enablement; completing paper trading must never enable it automatically.
+The first release trades BTC-USD only through Coinbase Advanced Trade. It uses no leverage, short selling, grid trading, or multiple strategies. Per the October 2026 scope addition, historical testing also includes ETH-USD and SOL-USD as independent experiments; continuous paper trading remains BTC-USD. Live trading requires the owner's explicit review and enablement; completing paper trading must never enable it automatically.
 
 ## Agreed trading rules
 
@@ -30,13 +30,15 @@ The 55/20/200 parameters are initial hypotheses, not proven settings. A 70% draw
 
 Use these provisional defaults for paper trading and make them visible in configuration. Validate them against Coinbase capabilities before live trading:
 
-- Place entry limits at the best bid; calculate the entry deadline from the daily signal evaluation, so order replacements cannot extend the one-hour window. Skip expired signals after downtime.
-- Use a post-only ask-side limit for the normal exit attempt. Its one-minute deadline includes replacements; use supported market execution for the remainder afterward.
+- Place entry limits once at the best bid; anchor the entry deadline to the UTC signal candle close (01:00 UTC for the default window). Delayed evaluation gets only the remaining time; skip expired signals after downtime. Retry post-only rejection with a fresh quote only within the original window; do not periodically reprice accepted limits.
+- Place a post-only ask-side limit once for the normal exit attempt. Its one-minute deadline includes rejection retries; use supported market execution for the remainder afterward.
 - Monitor risk at least every five seconds using fresh executable bid prices. Mark portfolio value as USD plus BTC valued at bid; include paid fees in cash accounting. Show estimated liquidation costs separately.
 - If market data becomes stale, block new entries and alert. Do not calculate a trustworthy drawdown from stale prices; attempt a fresh REST quote and reconcile before acting. Exchange outages can prevent liquidation.
 - Keep the portfolio peak persisted across restarts and manual resumes. Resetting the peak must be a separate explicit action with an audit record. Initially support no deposits or withdrawals during a run; block or flag unexplained balance changes rather than treating them as trading performance.
 - A retained partial entry is a held position: do not top it up or pyramid. A completely unfilled entry may be reconsidered only at the next daily evaluation.
 - Treat the dedicated Coinbase portfolio's BTC and USD as bot capital. Unexpected balances or ambiguous pending orders require reconciliation before trading.
+- Pausing entries cancels and reconciles pending buys, retaining partial fills; normal exits and risk monitoring continue. Reject resume while drawdown still meets the halt threshold or liquidation remains incomplete. Peak reset remains a separate explicit audited action.
+- Complete the paper application even if historical results are unfavorable. Owner review assesses held-out wealth, drawdown, costs, and execution sensitivity; there is no automatic profitability gate. Start with free historical data and document approximation and coverage limits.
 
 ## Architecture
 
@@ -128,7 +130,7 @@ Acceptance: a clean install succeeds; ingestion is repeatable; candle integrity 
 
 Implement deterministic signals, portfolio accounting, execution simulation, benchmarks, and report generation.
 
-Acceptance: tests catch channel look-ahead, premature fills, incorrect fees, double-counted balances, and drawdown errors. Reports identify execution approximations and show actual trades when the selected period produces signals. Complete out-of-sample and parameter-neighborhood analysis before deciding whether the strategy merits paper deployment.
+Acceptance: tests catch channel look-ahead, premature fills, incorrect fees, double-counted balances, and drawdown errors. Reports identify execution approximations and show simulated trades when the selected period produces signals. Complete out-of-sample and parameter-neighborhood analysis, report unfavorable outcomes, and continue delivering the paper worker and dashboard. Owner review determines whether evidence warrants any later live readiness work.
 
 ### 3. Paper worker and reconciliation
 
@@ -170,4 +172,27 @@ Live acceptance: real fills and fees reconcile with balances; expiry and exit po
 
 The first release is complete when reproducible backtests, a validated paper worker, the private dashboard, email notifications, deployment instructions, and operating procedures exist and pass their relevant checks. Report profitability evidence and engineering readiness separately. If the strategy fails the buy-and-hold comparison, report that outcome and keep live trading disabled rather than tuning indefinitely until a favorable result appears.
 
-This document is an implementation plan. No application, backtest results, production deployment, or live trading capability has been created or verified yet.
+The local research and paper application is implemented; current evidence and remaining gates are recorded in docs/INITIAL_RESULTS.md and docs/READINESS.md. Production deployment, verified email delivery, the multiweek observation period, and any live readiness work remain outstanding. No live order capability is implemented.
+
+## Intraday research scope addition — October 11, 2026
+
+Incorporate the owner's three leading-indicator hypotheses for BTC, ETH and SOL:
+spot/perpetual aggressive-volume divergence; base-unit OI growth plus funding/taker
+crowding and a subsequent opposite-direction trigger; and persistent thinning of
+ask liquidity within a consistent book band. These are research hypotheses, not
+assumptions of guaranteed reversals, leverage or liquidations.
+
+The initial implementation uses fixed five-minute inputs, explicit availability
+and source timestamps, venue/coverage checks, independent feature families, and
+15/60-minute event studies. Public Binance spot/perpetual archives support actual
+CVD studies, with archive checksums and a canonical import schema. OI/funding and
+book inputs remain unavailable until suitable historical or recorded data is
+supplied. Their detectors are implemented and tested; missing values never trigger
+an inferred signal. Events are studied after data availability; costs are shown as
+arithmetic sensitivity, separately from executable portfolio performance.
+
+The existing BTC paper worker, long-only portfolio constraints and prohibition on
+real order submission remain in force. Derivatives data are indicator inputs, not
+authorization for perpetual trading or shorts. Freeze thresholds before fresh
+chronological evaluation; do not select a strategy using previously inspected data.
+See docs/MICROSTRUCTURE_RESEARCH.md for definitions and initial actual-data evidence.

@@ -1,0 +1,1 @@
+asset,timestamp,available_at,spot_venue,perp_venue,book_venue,open,high,low,close,spot_buy_quote,spot_sell_quote,perp_buy_quote,perp_sell_quote,oi_base,funding_rate,funding_interval_hours,bid_depth_quote,ask_depth_quote,spread_bps,book_band_bps,oi_timestamp,funding_timestamp,book_timestamp,spot_complete,perp_complete,book_complete
